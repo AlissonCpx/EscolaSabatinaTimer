@@ -1,0 +1,49 @@
+{
+  "name": "escola-sabatina-timer",
+  "version": "1.0.0",
+  "description": "Timer para Escola Sabatina - Relógio visual com detecção de monitores",
+  "author": "Alisson Andrade",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "build:nsis": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.escolasabatina.timer",
+    "productName": "Escola Sabatina Timer",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "EscolaSabatinaTimer.exe"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "control.html",
+      "display.html",
+      "logo.png",
+      "icon.png",
+      "package.json"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.8.1",
+    "sharp": "^0.34.5"
+  }
+}

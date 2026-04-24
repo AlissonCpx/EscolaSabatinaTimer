@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<!--
+  Escola Sabatina Timer — Control Panel
+  @author Alisson Andrade
+  @license MIT
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escola Sabatina — Controle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #111827;
+      color: #e0e0e0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.6rem;
+      overflow-y: auto;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .section-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 0.3rem;
+    }
+
+    /* === Monitor Selector === */
+    #monitor-section {
+      width: 100%; max-width: 500px;
+      margin-bottom: 0.5rem; padding: 0.6rem;
+      background: rgba(74,144,217,0.06);
+      border: 1px solid rgba(74,144,217,0.15);
+      border-radius: 8px;
+    }
+
+    #monitor-select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px; color: #e0e0e0;
+      font-size: 0.8rem; font-family: 'Inter', sans-serif;
+      padding: 0.3rem 0.5rem; outline: none; cursor: pointer;
+      margin-bottom: 0.3rem;
+    }
+    #monitor-select option { background: #1a1f30; }
+    #monitor-info { font-size: 0.65rem; color: rgba(255,255,255,0.3); }
+
+    .monitor-buttons { display: flex; gap: 0.3rem; margin-top: 0.3rem; }
+
+    .btn-monitor {
+      flex: 1; font-family: 'Inter', sans-serif;
+      font-size: 0.7rem; font-weight: 600; padding: 0.3rem;
+      border-radius: 5px; cursor: pointer; transition: all 0.2s;
+      border: none; outline: none;
+    }
+    .btn-open-display {
+      background: rgba(74,144,217,0.15);
+      border: 1px solid rgba(74,144,217,0.3); color: #4A90D9;
+    }
+    .btn-open-display:hover { background: rgba(74,144,217,0.25); }
+    .btn-open-display.active {
+      background: rgba(107,174,117,0.15);
+      border: 1px solid rgba(107,174,117,0.3); color: #6BAE75;
+    }
+    .btn-close-display {
+      background: rgba(232,128,128,0.1);
+      border: 1px solid rgba(232,128,128,0.2); color: #E88080;
+      display: none;
+    }
+    .btn-close-display:hover { background: rgba(232,128,128,0.2); }
+    .btn-close-display.visible { display: block; }
+
+    /* === Preview + Status row === */
+    #top-row {
+      display: flex; align-items: center; gap: 0.8rem;
+      width: 100%; max-width: 500px;
+      margin-bottom: 0.5rem;
+    }
+
+    #preview-section { flex-shrink: 0; }
+    #preview-container { width: 110px; height: 110px; }
+    #preview-svg { width: 100%; height: 100%; }
+
+    .preview-arc {
+      fill: none; stroke-width: 18; stroke-linecap: round;
+      opacity: 0.15; transition: opacity 0.8s ease, stroke-width 0.8s ease;
+    }
+    .preview-arc.active { opacity: 0.95; stroke-width: 20; }
+    .preview-arc.completed { opacity: 0.06; }
+    .preview-ring { fill: none; stroke: rgba(255,255,255,0.03); stroke-width: 20; }
+    .preview-inner-ring { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 1; }
+    #preview-hand-line { stroke: rgba(255,255,255,0.85); stroke-width: 2.5; stroke-linecap: round; }
+    #preview-hand-dot { fill: rgba(255,255,255,0.8); }
+    .preview-center { fill: #111827; stroke: rgba(255,255,255,0.06); stroke-width: 1.5; }
+    .preview-center-dot { fill: rgba(255,255,255,0.8); }
+
+    #preview-phase-label {
+      text-align: center; font-family: 'Poppins', sans-serif;
+      font-size: 0.7rem; font-weight: 600;
+      margin-top: 0.1rem; min-height: 0.9rem;
+      transition: color 0.6s ease;
+    }
+
+    #status-section {
+      flex: 1; text-align: center;
+      padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.04);
+      border-radius: 8px;
+    }
+    #status-text { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+    #status-text.running { color: #6BAE75; }
+    #status-text.paused { color: #F5C842; }
+    #status-text.concluded { color: #F5C842; }
+    #time-remaining {
+      font-size: 1.3rem; font-weight: 600;
+      color: rgba(255,255,255,0.8); margin-top: 0.1rem;
+    }
+
+    /* === Phases Config === */
+    #phases-section {
+      width: 100%; max-width: 500px;
+      margin-bottom: 0.4rem; padding: 0.6rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+    }
+
+    .phases-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.4rem; gap: 0.3rem;
+    }
+
+    .phases-header-btns {
+      display: flex; gap: 0.3rem;
+    }
+
+    .btn-add-phase {
+      background: rgba(74,144,217,0.1);
+      border: 1px solid rgba(74,144,217,0.2);
+      color: #4A90D9; font-size: 0.65rem; font-weight: 600;
+      padding: 0.2rem 0.5rem; border-radius: 4px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-add-phase:hover { background: rgba(74,144,217,0.2); }
+
+    .btn-reset-phases {
+      background: rgba(232,128,128,0.08);
+      border: 1px solid rgba(232,128,128,0.15);
+      color: rgba(232,128,128,0.6); font-size: 0.6rem; font-weight: 600;
+      padding: 0.2rem 0.5rem; border-radius: 4px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-reset-phases:hover { background: rgba(232,128,128,0.15); color: #E88080; }
+
+    .phase-row {
+      display: flex; align-items: center; gap: 0.3rem;
+      margin-bottom: 0.3rem; padding: 0.35rem 0.4rem;
+      background: rgba(255,255,255,0.02);
+      border-radius: 5px; border: 1px solid rgba(255,255,255,0.04);
+      transition: opacity 0.3s;
+    }
+    .phase-row:last-child { margin-bottom: 0; }
+    .phase-row.disabled { opacity: 0.3; }
+
+    .phase-color-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .phase-toggle {
+      width: 14px; height: 14px; border-radius: 3px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: transparent; cursor: pointer;
+      flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; transition: all 0.2s;
+      font-size: 0.55rem; color: transparent; padding: 0;
+    }
+    .phase-toggle.checked {
+      background: rgba(107,174,117,0.3);
+      border-color: #6BAE75; color: #6BAE75;
+    }
+
+    .option-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+    .option-row:last-child { margin-bottom: 0; }
+
+    .option-checkbox {
+      width: 14px; height: 14px; border-radius: 3px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: transparent; cursor: pointer;
+      flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; transition: all 0.2s;
+      font-size: 0.55rem; color: transparent; padding: 0;
+    }
+    .option-checkbox.checked {
+      background: rgba(107,174,117,0.3);
+      border-color: #6BAE75; color: #6BAE75;
+    }
+
+    .option-label {
+      font-size: 0.7rem; color: rgba(255,255,255,0.5);
+      cursor: pointer; user-select: none;
+    }
+
+    .phase-name-input {
+      background: transparent; border: none;
+      color: #e0e0e0; font-size: 0.75rem;
+      font-family: 'Inter', sans-serif; font-weight: 500;
+      flex: 1; min-width: 0; outline: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .phase-name-input:focus { border-bottom-color: rgba(255,255,255,0.2); }
+
+    .phase-weight-group {
+      display: flex; align-items: center; gap: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    .phase-weight-btn {
+      width: 18px; height: 18px; border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.6); font-size: 0.7rem;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; transition: all 0.2s;
+      padding: 0; font-family: 'Inter', sans-serif;
+    }
+    .phase-weight-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    .phase-minutes-input {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 3px; color: rgba(255,255,255,0.8);
+      font-size: 0.75rem; font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      width: 32px; text-align: center;
+      padding: 0.1rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .phase-minutes-input:focus {
+      border-color: rgba(74,144,217,0.5);
+      background: rgba(255,255,255,0.08);
+    }
+
+    .phase-pct {
+      font-size: 0.55rem; color: rgba(255,255,255,0.25);
+      min-width: 28px; text-align: right;
+    }
+
+    .phase-order-btns {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+
+    .phase-order-btn {
+      width: 14px; height: 10px; border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.4); font-size: 0.5rem;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; padding: 0;
+      font-family: 'Inter', sans-serif; line-height: 1;
+      transition: all 0.2s;
+    }
+    .phase-order-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    .phase-remove-btn {
+      width: 14px; height: 14px; border-radius: 3px;
+      border: 1px solid rgba(232,128,128,0.15);
+      background: rgba(232,128,128,0.05);
+      color: rgba(232,128,128,0.5); font-size: 0.6rem;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; padding: 0;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .phase-remove-btn:hover { background: rgba(232,128,128,0.2); color: #E88080; }
+
+    /* === Control Panel === */
+    #control-panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 0.6rem;
+      width: 100%; max-width: 500px;
+    }
+
+    .panel-row { margin-bottom: 0.4rem; }
+    .panel-row:last-child { margin-bottom: 0; }
+
+    .panel-label {
+      font-size: 0.6rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: rgba(255,255,255,0.35);
+      margin-bottom: 0.2rem;
+    }
+
+    #end-time-input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px; color: #e0e0e0;
+      font-size: 1rem; font-family: 'Inter', sans-serif;
+      font-weight: 600; padding: 0.25rem 0.5rem;
+      text-align: center; width: 110px; outline: none;
+    }
+    #end-time-input:focus { border-color: #4A90D9; }
+
+    .btn {
+      border: none; border-radius: 5px;
+      font-family: 'Inter', sans-serif; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease; outline: none;
+    }
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: #4A90D9; color: #fff;
+      font-size: 0.85rem; padding: 0.4rem 0.8rem; width: 100%;
+    }
+    .btn-primary:hover { background: #5A9FE8; }
+    .btn-primary:disabled { background: rgba(74,144,217,0.3); cursor: not-allowed; }
+
+    .btn-pause {
+      background: rgba(245,200,66,0.15); color: #F5C842;
+      font-size: 0.8rem; padding: 0.35rem 0.6rem; width: 100%;
+      border: 1px solid rgba(245,200,66,0.25);
+    }
+    .btn-pause:hover { background: rgba(245,200,66,0.25); }
+    .btn-pause:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-reset {
+      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
+      font-size: 0.7rem; padding: 0.25rem 0.5rem; width: 100%;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .btn-reset:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+
+    .btn-adjust {
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+      font-size: 0.75rem; padding: 0.25rem 0.3rem; flex: 1;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .btn-adjust:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .btn-adjust:disabled { opacity: 0.25; cursor: not-allowed; }
+    .btn-adjust.minus { color: #E88080; border-color: rgba(232,128,128,0.15); }
+    .btn-adjust.minus:hover { background: rgba(232,128,128,0.12); }
+    .btn-adjust.plus { color: #6BAE75; border-color: rgba(107,174,117,0.15); }
+    .btn-adjust.plus:hover { background: rgba(107,174,117,0.12); }
+
+    .adjust-row { display: flex; gap: 0.25rem; }
+
+    #feedback {
+      position: fixed; bottom: 0.6rem; right: 0.6rem;
+      background: rgba(107,174,117,0.15);
+      border: 1px solid rgba(107,174,117,0.3);
+      color: #6BAE75; padding: 0.3rem 0.6rem;
+      border-radius: 5px; font-size: 0.7rem; font-weight: 500;
+      opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+    }
+    #feedback.show { opacity: 1; }
+
+    /* Custom tooltips */
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 25, 40, 0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.6rem;
+      font-weight: 400;
+      padding: 0.3rem 0.5rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 100;
+      pointer-events: none;
+      animation: tooltip-fade 0.15s ease;
+    }
+    @keyframes tooltip-fade {
+      from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    .kbd-hint {
+      font-size: 0.55rem; color: rgba(255,255,255,0.2);
+      margin-top: 0.3rem; text-align: center;
+    }
+    kbd {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 2px; padding: 0.05rem 0.2rem;
+      font-family: 'Inter', sans-serif; font-size: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Escola Sabatina</h1>
+
+  <div id="monitor-section">
+    <div class="section-label">Tela do projetor</div>
+    <select id="monitor-select"></select>
+    <div id="monitor-info">Detectando monitores...</div>
+    <div class="monitor-buttons">
+      <button class="btn-monitor btn-open-display" id="btn-open-display" data-tooltip="Abre a tela de projeção no monitor selecionado">Projetar neste monitor</button>
+      <button class="btn-monitor btn-close-display" id="btn-close-display" data-tooltip="Fecha a tela de projeção">Fechar projeção</button>
+    </div>
+  </div>
+
+  <div id="top-row">
+    <div id="preview-section">
+      <div id="preview-container">
+        <svg id="preview-svg" viewBox="0 0 400 400">
+          <circle class="preview-ring" cx="200" cy="200" r="170" />
+          <circle class="preview-inner-ring" cx="200" cy="200" r="147" />
+          <g id="preview-arcs" transform="rotate(-90 200 200)"></g>
+          <circle class="preview-center" cx="200" cy="200" r="24" />
+          <circle class="preview-center-dot" cx="200" cy="200" r="3.5" />
+          <g id="preview-hand">
+            <line id="preview-hand-line" x1="200" y1="200" x2="200" y2="48" />
+            <circle id="preview-hand-dot" cx="200" cy="48" r="3" />
+          </g>
+        </svg>
+      </div>
+      <div id="preview-phase-label"></div>
+    </div>
+    <div id="status-section">
+      <div id="status-text">Aguardando início</div>
+      <div id="time-remaining"></div>
+    </div>
+  </div>
+
+  <div id="phases-section">
+    <div class="phases-header">
+      <div class="section-label" style="margin-bottom:0">Etapas <span style="font-weight:400;letter-spacing:0.05em;opacity:0.6">(clique nos minutos para editar)</span></div>
+      <div class="phases-header-btns">
+        <button class="btn-reset-phases" id="btn-reset-phases" data-tooltip="Volta para as 3 etapas padrão e horário 10:00">Restaurar padrão</button>
+        <button class="btn-add-phase" id="btn-add-phase" data-tooltip="Adiciona uma nova etapa ao programa">+ Adicionar</button>
+      </div>
+    </div>
+    <div id="phases-list"></div>
+  </div>
+
+  <div id="control-panel">
+    <div class="panel-row">
+      <div class="panel-label">Horário de término</div>
+      <input type="time" id="end-time-input" value="10:00" data-tooltip="Horário de término do programa" />
+    </div>
+    <div class="panel-row">
+      <button class="btn btn-primary" id="btn-start" data-tooltip="Inicia o cronômetro com as etapas configuradas">Iniciar</button>
+    </div>
+    <div class="panel-row">
+      <button class="btn btn-pause" id="btn-pause" disabled data-tooltip="Pausa ou retoma o cronômetro">Pausar</button>
+    </div>
+    <div class="panel-row">
+      <div class="panel-label">Ajustar tempo <span style="font-weight:400;text-transform:none;letter-spacing:0.02em;opacity:0.5">(mudança suave na projeção)</span></div>
+      <div class="adjust-row">
+        <button class="btn btn-adjust minus" data-delta="-15" disabled data-tooltip="Remover 15 minutos">-15</button>
+        <button class="btn btn-adjust minus" data-delta="-10" disabled data-tooltip="Remover 10 minutos">-10</button>
+        <button class="btn btn-adjust minus" data-delta="-5" disabled data-tooltip="Remover 5 minutos">-5</button>
+        <button class="btn btn-adjust plus" data-delta="5" disabled data-tooltip="Adicionar 5 minutos">+5</button>
+        <button class="btn btn-adjust plus" data-delta="10" disabled data-tooltip="Adicionar 10 minutos">+10</button>
+      </div>
+    </div>
+    <div class="panel-row">
+      <div class="option-row">
+        <button class="option-checkbox checked" id="chk-phase-timer" data-tooltip="Mostra o tempo restante da etapa na projeção">✓</button>
+        <label class="option-label" for="chk-phase-timer">Cronômetro da etapa na projeção</label>
+      </div>
+      <div class="option-row">
+        <button class="option-checkbox" id="chk-sound" data-tooltip="Emite um som suave ao concluir o programa">✓</button>
+        <label class="option-label" for="chk-sound">Som ao concluir</label>
+      </div>
+    </div>
+    <div class="panel-row">
+      <button class="btn btn-reset" id="btn-reset">Reiniciar</button>
+    </div>
+    <div class="kbd-hint">
+      <kbd>Espaço</kbd> Iniciar/Pausar &nbsp; <kbd>←</kbd> -5min &nbsp; <kbd>→</kbd> +5min
+    </div>
+  </div>
+
+  <div id="feedback">Display atualizado</div>
+
+  <script>
+    const CX = 200, CY = 200, R = 170;
+    const STORAGE_KEY_MONITOR = 'sabatina-selected-monitor';
+    const STORAGE_KEY_PHASES = 'sabatina-phases';
+    const STORAGE_KEY_ENDTIME = 'sabatina-end-time';
+    const DEFAULT_END_TIME = '10:00';
+
+    const PHASE_COLORS = ['#F5C842','#4A90D9','#6BAE75','#E88080','#B07CD8','#D4A05A','#5BC0BE','#C76F7E'];
+
+    const DEFAULT_PHASES = [
+      { name: 'Confraternização', minutes: 10, color: '#F5C842', enabled: true },
+      { name: 'Estudo da Lição',  minutes: 30, color: '#4A90D9', enabled: true },
+      { name: 'Pastoreiro',       minutes: 15, color: '#6BAE75', enabled: true }
+    ];
+
+    let phases = loadPhases();
+    let startTimestamp = null, endTimestamp = null;
+    let isRunning = false, isPaused = false, pausedAt = null;
+    let currentPhaseIndex = -1, previewAnimId = null;
+    let displayOpen = false, selectedDisplayId = null;
+
+    // Smooth transition for time adjustments (preview)
+    let targetEndTimestamp = null;
+    let transitionStart = null;
+    let transitionFrom = null;
+    const TRANSITION_DURATION = 10000; // 10 seconds
+
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+    const btnReset = document.getElementById('btn-reset');
+    const endTimeInput = document.getElementById('end-time-input');
+    const statusText = document.getElementById('status-text');
+    const timeRemaining = document.getElementById('time-remaining');
+    const previewArcs = document.getElementById('preview-arcs');
+    const previewHand = document.getElementById('preview-hand');
+    const previewPhaseLabel = document.getElementById('preview-phase-label');
+    const feedbackEl = document.getElementById('feedback');
+    const adjustButtons = document.querySelectorAll('.btn-adjust');
+    const monitorSelect = document.getElementById('monitor-select');
+    const monitorInfo = document.getElementById('monitor-info');
+    const btnOpenDisplay = document.getElementById('btn-open-display');
+    const btnCloseDisplay = document.getElementById('btn-close-display');
+    const phasesList = document.getElementById('phases-list');
+    const btnAddPhase = document.getElementById('btn-add-phase');
+    const chkPhaseTimer = document.getElementById('chk-phase-timer');
+    const chkSound = document.getElementById('chk-sound');
+
+    // Options state (persisted)
+    const STORAGE_KEY_OPTIONS = 'sabatina-options';
+    let options = loadOptions();
+    function loadOptions() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_OPTIONS);
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      return { showPhaseTimer: true, playSoundOnEnd: false };
+    }
+    function saveOptions() { localStorage.setItem(STORAGE_KEY_OPTIONS, JSON.stringify(options)); }
+
+    // Apply saved options to checkboxes
+    chkPhaseTimer.classList.toggle('checked', options.showPhaseTimer);
+    chkPhaseTimer.textContent = options.showPhaseTimer ? '✓' : '';
+    chkSound.classList.toggle('checked', options.playSoundOnEnd);
+    chkSound.textContent = options.playSoundOnEnd ? '✓' : '';
+
+    function sendOptions() {
+      sendCommand({ type: 'setOptions', showPhaseTimer: options.showPhaseTimer, playSoundOnEnd: options.playSoundOnEnd });
+    }
+
+    chkPhaseTimer.addEventListener('click', () => {
+      options.showPhaseTimer = !options.showPhaseTimer;
+      chkPhaseTimer.classList.toggle('checked', options.showPhaseTimer);
+      chkPhaseTimer.textContent = options.showPhaseTimer ? '✓' : '';
+      saveOptions(); sendOptions();
+    });
+    chkSound.addEventListener('click', () => {
+      options.playSoundOnEnd = !options.playSoundOnEnd;
+      chkSound.classList.toggle('checked', options.playSoundOnEnd);
+      chkSound.textContent = options.playSoundOnEnd ? '✓' : '';
+      saveOptions(); sendOptions();
+    });
+
+    // === Phases persistence ===
+    function loadPhases() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_PHASES);
+        if (raw) {
+          const loaded = JSON.parse(raw);
+          // Migrate old weight-based phases to minutes
+          return loaded.map(p => {
+            if (p.minutes === undefined && p.weight !== undefined) {
+              return { name: p.name, minutes: p.weight, color: p.color, enabled: p.enabled };
+            }
+            return p;
+          });
+        }
+      } catch(e) {}
+      return DEFAULT_PHASES.map(p => ({...p}));
+    }
+    function savePhases() { localStorage.setItem(STORAGE_KEY_PHASES, JSON.stringify(phases)); }
+    function getActivePhases() { return phases.filter(p => p.enabled); }
+    function getTotalMinutes() { return getActivePhases().reduce((s, p) => s + (p.minutes || p.weight || 1), 0); }
+    function getPhaseRatio(phase) { const t = getTotalMinutes(); const v = phase.minutes || phase.weight || 1; return t > 0 ? v / t : 0; }
+
+    // Calculate end time from phase minutes
+    // When running, completed phases' time is already elapsed, so end = start + all minutes
+    function calcEndTimestampFromPhases() {
+      const totalMin = getTotalMinutes();
+      const base = startTimestamp || Date.now();
+      return base + totalMin * 60000;
+    }
+
+    // Get the list of remaining active phases (current + future, not completed)
+    function getRemainingPhases() {
+      const active = getActivePhases();
+      if (!isRunning || currentPhaseIndex < 0) return active;
+      return active.filter((_, i) => i >= currentPhaseIndex);
+    }
+
+    // Get total minutes of completed phases (time already elapsed in those)
+    function getCompletedMinutes() {
+      if (!isRunning || currentPhaseIndex <= 0) return 0;
+      const active = getActivePhases();
+      let total = 0;
+      for (let i = 0; i < currentPhaseIndex && i < active.length; i++) {
+        total += active[i].minutes || 1;
+      }
+      return total;
+    }
+
+    // When end time changes, redistribute minutes ONLY among remaining phases
+    // Returns false if there's not enough time (each phase needs at least 1 minute)
+    function redistributeMinutes(newTotalMin) {
+      if (!isRunning || currentPhaseIndex <= 0) {
+        // Not running or no completed phases — redistribute all
+        const active = getActivePhases();
+        if (active.length === 0) return true;
+        // Validate: need at least 1 minute per active phase
+        if (newTotalMin < active.length) return false;
+        const currentTotal = getTotalMinutes();
+        if (currentTotal <= 0) return false;
+        active.forEach(p => {
+          p.minutes = Math.max(1, Math.round(p.minutes / currentTotal * newTotalMin));
+        });
+        const diff = newTotalMin - getTotalMinutes();
+        if (diff !== 0 && active.length > 0) active[0].minutes += diff;
+        return true;
+      } else {
+        // Running with completed phases — only redistribute remaining time
+        const completedMin = getCompletedMinutes();
+        const remainingMin = Math.max(newTotalMin - completedMin, 1);
+        const remaining = getRemainingPhases();
+        if (remaining.length === 0) return true;
+        // Validate: need at least 1 minute per remaining phase
+        if (remainingMin < remaining.length) return false;
+        const currentRemaining = remaining.reduce((s, p) => s + (p.minutes || 1), 0);
+        if (currentRemaining <= 0) return false;
+        remaining.forEach(p => {
+          p.minutes = Math.max(1, Math.round(p.minutes / currentRemaining * remainingMin));
+        });
+        const diff = remainingMin - remaining.reduce((s, p) => s + p.minutes, 0);
+        if (diff !== 0 && remaining.length > 0) remaining[0].minutes += diff;
+        return true;
+      }
+    }
+
+    // === Render phases ===
+    function renderPhases() {
+      phasesList.innerHTML = '';
+      const totalMin = getTotalMinutes();
+      phases.forEach((phase, i) => {
+        const pct = phase.enabled ? Math.round(getPhaseRatio(phase) * 100) : 0;
+        const row = document.createElement('div');
+        row.className = 'phase-row' + (phase.enabled ? '' : ' disabled');
+        row.innerHTML = `
+          <div class="phase-color-dot" style="background:${phase.color}"></div>
+          <button class="phase-toggle ${phase.enabled ? 'checked' : ''}" data-i="${i}" data-tooltip="Ativar/desativar esta etapa">${phase.enabled ? '✓' : ''}</button>
+          <input class="phase-name-input" value="${phase.name}" data-i="${i}" data-tooltip="Nome da etapa" />
+          <div class="phase-weight-group">
+            <button class="phase-weight-btn" data-i="${i}" data-dir="-1" data-tooltip="Diminuir minutos">−</button>
+            <input class="phase-minutes-input" value="${phase.minutes}" data-i="${i}" data-tooltip="Minutos desta etapa (clique para editar)" />
+            <button class="phase-weight-btn" data-i="${i}" data-dir="1" data-tooltip="Aumentar minutos">+</button>
+          </div>
+          <span class="phase-pct">${phase.enabled ? pct + '%' : '—'}</span>
+          <div class="phase-order-btns">
+            <button class="phase-order-btn" data-i="${i}" data-dir="-1" data-tooltip="Mover para cima">▲</button>
+            <button class="phase-order-btn" data-i="${i}" data-dir="1" data-tooltip="Mover para baixo">▼</button>
+          </div>
+          <button class="phase-remove-btn" data-i="${i}" data-tooltip="Remover esta etapa">×</button>
+        `;
+        phasesList.appendChild(row);
+      });
+
+      // Bind events
+      phasesList.querySelectorAll('.phase-toggle').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i; phases[i].enabled = !phases[i].enabled;
+        savePhases(); renderPhases(); syncEndTimeFromPhases();
+        if (isRunning) sendPhasesUpdate();
+      }));
+      phasesList.querySelectorAll('.phase-name-input').forEach(inp => inp.addEventListener('change', () => {
+        const i = +inp.dataset.i; phases[i].name = inp.value;
+        savePhases(); if (isRunning) sendPhasesUpdate();
+      }));
+      phasesList.querySelectorAll('.phase-weight-btn').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i, dir = +b.dataset.dir;
+        phases[i].minutes = Math.max(1, phases[i].minutes + dir);
+        savePhases(); renderPhases(); syncEndTimeFromPhases();
+        if (isRunning) sendPhasesUpdate();
+      }));
+      phasesList.querySelectorAll('.phase-minutes-input').forEach(inp => inp.addEventListener('change', () => {
+        const i = +inp.dataset.i;
+        const val = parseInt(inp.value, 10);
+        if (!isNaN(val) && val >= 1) {
+          phases[i].minutes = val;
+          savePhases(); renderPhases(); syncEndTimeFromPhases();
+          if (isRunning) sendPhasesUpdate();
+        } else {
+          inp.value = phases[i].minutes;
+        }
+      }));
+      phasesList.querySelectorAll('.phase-order-btn').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i, dir = +b.dataset.dir;
+        const ni = i + dir;
+        if (ni < 0 || ni >= phases.length) return;
+        [phases[i], phases[ni]] = [phases[ni], phases[i]];
+        savePhases(); renderPhases(); if (isRunning) sendPhasesUpdate();
+      }));
+      phasesList.querySelectorAll('.phase-remove-btn').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.i;
+        phases.splice(i, 1);
+        savePhases(); renderPhases(); syncEndTimeFromPhases();
+        if (isRunning) sendPhasesUpdate();
+      }));
+    }
+
+    // Sync end time from phase minutes — also updates running timer
+    function syncEndTimeFromPhases() {
+      const end = calcEndTimestampFromPhases();
+      updateEndTimeInput(end);
+      if (isRunning) {
+        // Update the running timer's end timestamp
+        targetEndTimestamp = end;
+        transitionStart = Date.now();
+        transitionFrom = endTimestamp;
+        sendCommand({ type: 'adjustEnd', newEndTimestamp: end });
+        drawPreviewArcs();
+        updatePreview();
+      }
+    }
+
+    btnAddPhase.addEventListener('click', () => {
+      const colorIdx = phases.length % PHASE_COLORS.length;
+      phases.push({ name: 'Nova Etapa', minutes: 10, color: PHASE_COLORS[colorIdx], enabled: true });
+      savePhases(); renderPhases(); syncEndTimeFromPhases();
+      if (isRunning) sendPhasesUpdate();
+    });
+
+    document.getElementById('btn-reset-phases').addEventListener('click', () => {
+      phases = DEFAULT_PHASES.map(p => ({...p}));
+      savePhases(); renderPhases(); syncEndTimeFromPhases();
+      if (isRunning) sendPhasesUpdate();
+      showFeedback('Etapas e horário restaurados');
+    });
+
+    function sendPhasesUpdate() {
+      sendCommand({ type: 'updatePhases', phases: phases });
+      drawPreviewArcs(); updatePreview();
+    }
+
+    // === Monitor ===
+    async function loadDisplays() {
+      const displays = await window.electronAPI.getDisplays();
+      monitorSelect.innerHTML = '';
+      displays.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = `${d.label} — ${d.resolution}${d.isPrimary ? ' (Principal)' : ''}`;
+        monitorSelect.appendChild(opt);
+      });
+      monitorInfo.textContent = displays.length === 1 ? '1 monitor' : `${displays.length} monitores`;
+      const saved = localStorage.getItem(STORAGE_KEY_MONITOR);
+      if (saved && displays.find(d => d.id === +saved)) monitorSelect.value = saved;
+      else { const np = displays.find(d => !d.isPrimary); if (np) monitorSelect.value = np.id; }
+      selectedDisplayId = +monitorSelect.value;
+    }
+    monitorSelect.addEventListener('change', () => {
+      selectedDisplayId = +monitorSelect.value;
+      localStorage.setItem(STORAGE_KEY_MONITOR, String(selectedDisplayId));
+    });
+
+    function updateDisplayButtons() {
+      btnOpenDisplay.textContent = displayOpen ? 'Projeção ativa' : 'Projetar neste monitor';
+      btnOpenDisplay.classList.toggle('active', displayOpen);
+      btnCloseDisplay.classList.toggle('visible', displayOpen);
+    }
+    btnOpenDisplay.addEventListener('click', async () => {
+      if (!displayOpen) {
+        selectedDisplayId = +monitorSelect.value;
+        localStorage.setItem(STORAGE_KEY_MONITOR, String(selectedDisplayId));
+        await window.electronAPI.openDisplay(selectedDisplayId);
+        displayOpen = true; updateDisplayButtons(); showFeedback('Projeção aberta');
+        // Send current options to display after it opens
+        setTimeout(() => sendOptions(), 500);
+      }
+    });
+    btnCloseDisplay.addEventListener('click', async () => {
+      if (displayOpen) {
+        await window.electronAPI.closeDisplay();
+        displayOpen = false; updateDisplayButtons(); showFeedback('Projeção fechada');
+      }
+    });
+    window.electronAPI.onDisplayClosed(() => { displayOpen = false; updateDisplayButtons(); });
+
+    function sendCommand(cmd) { window.electronAPI.sendTimerCommand(cmd); }
+    function showFeedback(msg) {
+      feedbackEl.textContent = msg; feedbackEl.classList.add('show');
+      setTimeout(() => feedbackEl.classList.remove('show'), 1500);
+    }
+
+    // === SVG ===
+    function polarToCartesian(cx, cy, r, a) {
+      const rad = a * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    function describeArc(cx, cy, r, s, e) {
+      if (e - s >= 359.9) e = s + 359.9;
+      const st = polarToCartesian(cx, cy, r, e), en = polarToCartesian(cx, cy, r, s);
+      return `M ${st.x} ${st.y} A ${r} ${r} 0 ${(e-s)>180?1:0} 0 ${en.x} ${en.y}`;
+    }
+    function drawPreviewArcs() {
+      previewArcs.innerHTML = '';
+      if (!startTimestamp || !endTimestamp) return;
+      const ts = (endTimestamp - startTimestamp) / 1000;
+      if (ts <= 0) return;
+      const active = getActivePhases();
+      let off = 0;
+      active.forEach((p, i) => {
+        const a = getPhaseRatio(p) * 360;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', describeArc(CX, CY, R, off, off + a));
+        path.setAttribute('stroke', p.color);
+        path.classList.add('preview-arc');
+        if (i === currentPhaseIndex) path.classList.add('active');
+        else if (i < currentPhaseIndex) path.classList.add('completed');
+        previewArcs.appendChild(path);
+        off += a;
+      });
+    }
+
+    // === Time ===
+    function getEndTimestampFromInput() {
+      const [h, m] = endTimeInput.value.split(':').map(Number);
+      const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime();
+    }
+    function updateEndTimeInput(ts) {
+      const d = new Date(ts);
+      const val = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      endTimeInput.value = val;
+      localStorage.setItem(STORAGE_KEY_ENDTIME, val);
+    }
+    function getElapsed() { return startTimestamp ? (Date.now() - startTimestamp) / 1000 : 0; }
+
+    // Smooth easing
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    function applyTransition() {
+      if (targetEndTimestamp === null || transitionStart === null) return;
+      const now = Date.now();
+      const elapsed = now - transitionStart;
+      const t = Math.min(elapsed / TRANSITION_DURATION, 1);
+      const eased = easeInOutCubic(t);
+      endTimestamp = transitionFrom + (targetEndTimestamp - transitionFrom) * eased;
+      if (t >= 1) {
+        endTimestamp = targetEndTimestamp;
+        targetEndTimestamp = null;
+        transitionStart = null;
+        transitionFrom = null;
+      }
+    }
+
+    function getTotalSeconds() { return (endTimestamp && startTimestamp) ? (endTimestamp - startTimestamp) / 1000 : 0; }
+    function getPhaseInfo(el, ts) {
+      const active = getActivePhases(); let acc = 0;
+      for (let i = 0; i < active.length; i++) {
+        const d = getPhaseRatio(active[i]) * ts;
+        if (el < acc + d) return { index: i, progress: (el - acc) / d };
+        acc += d;
+      }
+      return { index: active.length - 1, progress: 1 };
+    }
+    function formatTime(s) {
+      if (s <= 0) return '00:00';
+      return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+    }
+
+    function updatePreview() {
+      applyTransition(); // smooth time adjustments
+      const ts = getTotalSeconds(), el = getElapsed();
+      if (ts <= 0 || !isRunning) return;
+      const prog = Math.min(el / ts, 1);
+      previewHand.setAttribute('transform', `rotate(${prog*360} ${CX} ${CY})`);
+      const pi = getPhaseInfo(el, ts);
+      const active = getActivePhases();
+      const npi = el >= ts ? -1 : pi.index;
+      if (npi !== currentPhaseIndex) {
+        currentPhaseIndex = npi; drawPreviewArcs();
+        if (currentPhaseIndex >= 0 && currentPhaseIndex < active.length) {
+          previewPhaseLabel.textContent = active[currentPhaseIndex].name;
+          previewPhaseLabel.style.color = active[currentPhaseIndex].color;
+        }
+      }
+      // Show remaining time based on the TARGET end (so operator sees real time immediately)
+      const effectiveEnd = targetEndTimestamp !== null ? targetEndTimestamp : endTimestamp;
+      const remainingSec = Math.max((effectiveEnd - Date.now()) / 1000, 0);
+      timeRemaining.textContent = formatTime(remainingSec);
+      if (el >= ts) concludeSession();
+    }
+    function previewTick() {
+      if (!isRunning || isPaused) return;
+      updatePreview(); previewAnimId = requestAnimationFrame(previewTick);
+    }
+
+    // === Actions ===
+    function startSession() {
+      const end = calcEndTimestampFromPhases(), now = Date.now();
+      if (end <= now) { statusText.textContent = 'Horário já passou!'; statusText.className = ''; return; }
+      if (!getActivePhases().length) { statusText.textContent = 'Ative pelo menos 1 etapa!'; statusText.className = ''; return; }
+      startTimestamp = now; endTimestamp = end; pausedAt = null;
+      isRunning = true; isPaused = false; currentPhaseIndex = -1;
+      // Sync the end time input to match calculated end
+      updateEndTimeInput(end);
+      sendCommand({ type: 'start', startTimestamp: now, endTimestamp: end, phases });
+      sendOptions();
+      btnStart.textContent = 'Iniciado'; btnStart.disabled = true;
+      btnPause.disabled = false; btnPause.textContent = 'Pausar';
+      adjustButtons.forEach(b => b.disabled = false);
+      statusText.textContent = 'Em andamento'; statusText.className = 'running';
+      drawPreviewArcs(); previewTick();
+    }
+    function togglePause() {
+      if (!isRunning) return;
+      if (isPaused) {
+        startTimestamp += (Date.now() - pausedAt); pausedAt = null; isPaused = false;
+        btnPause.textContent = 'Pausar'; statusText.textContent = 'Em andamento'; statusText.className = 'running';
+        sendCommand({ type: 'resume' }); previewTick();
+      } else {
+        isPaused = true; pausedAt = Date.now();
+        btnPause.textContent = 'Retomar'; statusText.textContent = 'Pausado'; statusText.className = 'paused';
+        sendCommand({ type: 'pause', pausedAt: Date.now() });
+        if (previewAnimId) cancelAnimationFrame(previewAnimId);
+      }
+    }
+    function adjustEndTime(dm) {
+      if (!isRunning) return;
+      // If already transitioning, chain from the current target
+      const baseTarget = targetEndTimestamp !== null ? targetEndTimestamp : endTimestamp;
+      const newTarget = baseTarget + dm * 60000;
+      // Validate: check if there's enough time for remaining phases
+      const elapsedMin = Math.round(getElapsed() / 60);
+      const totalMin = elapsedMin + Math.round((newTarget - Date.now()) / 60000);
+      const remainingPhases = getRemainingPhases();
+      const minRequired = getCompletedMinutes() + remainingPhases.length; // at least 1min per remaining phase
+      if (totalMin < minRequired) {
+        showFeedback(`Mínimo de ${remainingPhases.length}min para ${remainingPhases.length} etapa(s) restante(s)`);
+        return;
+      }
+      targetEndTimestamp = newTarget;
+      transitionStart = Date.now();
+      transitionFrom = endTimestamp;
+      redistributeMinutes(totalMin);
+      updateEndTimeInput(targetEndTimestamp);
+      sendCommand({ type: 'adjustEnd', newEndTimestamp: targetEndTimestamp });
+      renderPhases();
+      drawPreviewArcs();
+      updatePreview();
+      statusText.textContent = 'Em andamento'; statusText.className = 'running';
+    }
+    function resetSession() {
+      isRunning = false; isPaused = false;
+      startTimestamp = null; endTimestamp = null; pausedAt = null; currentPhaseIndex = -1;
+      targetEndTimestamp = null; transitionStart = null; transitionFrom = null;
+      if (previewAnimId) cancelAnimationFrame(previewAnimId);
+      sendCommand({ type: 'reset' });
+      previewArcs.innerHTML = '';
+      previewHand.setAttribute('transform', `rotate(0 ${CX} ${CY})`);
+      previewPhaseLabel.textContent = '';
+      btnStart.textContent = 'Iniciar'; btnStart.disabled = false;
+      btnPause.disabled = true; btnPause.textContent = 'Pausar';
+      adjustButtons.forEach(b => b.disabled = true);
+      statusText.textContent = 'Aguardando início'; statusText.className = '';
+      timeRemaining.textContent = '';
+    }
+    function concludeSession() {
+      isRunning = false; if (previewAnimId) cancelAnimationFrame(previewAnimId);
+      statusText.textContent = 'Concluído'; statusText.className = 'concluded';
+      timeRemaining.textContent = '00:00';
+      previewPhaseLabel.textContent = 'Concluído'; previewPhaseLabel.style.color = '#F5C842';
+      btnPause.disabled = true;
+    }
+
+    // === Events ===
+    btnStart.addEventListener('click', startSession);
+    btnPause.addEventListener('click', togglePause);
+    btnReset.addEventListener('click', resetSession);
+    adjustButtons.forEach(b => b.addEventListener('click', () => adjustEndTime(+b.dataset.delta)));
+
+    endTimeInput.addEventListener('change', () => {
+      localStorage.setItem(STORAGE_KEY_ENDTIME, endTimeInput.value);
+      if (isRunning) {
+        const ne = getEndTimestampFromInput();
+        if (ne > Date.now()) {
+          const elapsedMin = Math.round(getElapsed() / 60);
+          const remainingMin = Math.round((ne - Date.now()) / 60000);
+          const totalMin = elapsedMin + remainingMin;
+          // Validate minimum time for remaining phases
+          const remainingPhases = getRemainingPhases();
+          const minRequired = getCompletedMinutes() + remainingPhases.length;
+          if (totalMin < minRequired) {
+            statusText.textContent = `Mínimo de ${remainingPhases.length}min para ${remainingPhases.length} etapa(s) restante(s)`;
+            statusText.className = '';
+            // Revert input to current target
+            const currentEnd = targetEndTimestamp !== null ? targetEndTimestamp : endTimestamp;
+            updateEndTimeInput(currentEnd);
+            return;
+          }
+          if (!redistributeMinutes(totalMin)) {
+            statusText.textContent = 'Tempo insuficiente para as etapas';
+            statusText.className = '';
+            const currentEnd = targetEndTimestamp !== null ? targetEndTimestamp : endTimestamp;
+            updateEndTimeInput(currentEnd);
+            return;
+          }
+          targetEndTimestamp = ne;
+          transitionStart = Date.now();
+          transitionFrom = endTimestamp;
+          sendCommand({ type: 'adjustEnd', newEndTimestamp: ne });
+          renderPhases();
+          showFeedback('Horário atualizado');
+          statusText.textContent = 'Em andamento'; statusText.className = 'running';
+        } else { statusText.textContent = 'Horário já passou!'; statusText.className = ''; }
+      } else {
+        // Not running — redistribute minutes based on total time from now
+        const now = Date.now();
+        const end = getEndTimestampFromInput();
+        if (end > now) {
+          const totalMin = Math.round((end - now) / 60000);
+          const active = getActivePhases();
+          if (totalMin < active.length) {
+            statusText.textContent = `Mínimo de ${active.length}min para ${active.length} etapa(s)`;
+            statusText.className = '';
+            return;
+          }
+          redistributeMinutes(totalMin);
+          renderPhases();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.code === 'Space') { e.preventDefault(); if (!isRunning) startSession(); else togglePause(); }
+      else if (e.code === 'ArrowLeft') { e.preventDefault(); if (isRunning) adjustEndTime(-5); }
+      else if (e.code === 'ArrowRight') { e.preventDefault(); if (isRunning) adjustEndTime(5); }
+    });
+
+    // === Init ===
+    const savedEndTime = localStorage.getItem(STORAGE_KEY_ENDTIME);
+    if (savedEndTime) endTimeInput.value = savedEndTime;
+    renderPhases(); loadDisplays();
+  </script>
+</body>
+</html>

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<!--
+  Escola Sabatina Timer — Projection Display
+  @author Alisson Andrade
+  @license MIT
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escola Sabatina — Display</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #080c14;
+      color: #e0e0e0;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      cursor: none;
+    }
+
+    /* Header */
+    #header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.7;
+    }
+
+    #header img {
+      height: clamp(2rem, 4vw, 3.5rem);
+      width: auto;
+      opacity: 0.6;
+    }
+
+    #header-text {
+      font-size: clamp(1rem, 2.5vw, 1.8rem);
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.4);
+    }
+
+    #clock-container {
+      position: relative;
+      width: min(60vh, 60vw);
+      height: min(60vh, 60vw);
+    }
+
+    #clock-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .track-ring {
+      fill: none;
+      stroke: rgba(255,255,255,0.03);
+      stroke-width: 22;
+    }
+
+    .phase-arc {
+      fill: none;
+      stroke-width: 22;
+      stroke-linecap: round;
+      opacity: 0.15;
+      transition: opacity 0.8s ease, stroke-width 0.8s ease;
+    }
+    .phase-arc.active {
+      opacity: 0.95;
+      stroke-width: 24;
+    }
+    .phase-arc.completed {
+      opacity: 0.06;
+    }
+
+    .phase-glow {
+      fill: none;
+      stroke-width: 44;
+      stroke-linecap: round;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .phase-glow.active {
+      opacity: 0.12;
+    }
+
+    .inner-ring {
+      fill: none;
+      stroke: rgba(255,255,255,0.04);
+      stroke-width: 1;
+    }
+
+    .center-circle {
+      fill: #080c14;
+      stroke: rgba(255,255,255,0.06);
+      stroke-width: 1.5;
+    }
+
+    .center-dot {
+      fill: rgba(255,255,255,0.8);
+    }
+
+    #clock-hand-line {
+      stroke: rgba(255,255,255,0.85);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+    #clock-hand-tip {
+      fill: rgba(255,255,255,0.9);
+    }
+
+    .phase-dot {
+      fill: rgba(255,255,255,0.15);
+      transition: fill 0.6s ease;
+    }
+
+    #phase-label {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-align: center;
+      margin-top: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.6s ease, color 0.6s ease;
+      min-height: 3rem;
+    }
+    #phase-label.visible { opacity: 1; }
+
+    #progress-container {
+      width: min(35vh, 35vw);
+      height: 5px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      margin-top: 1rem;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      transition: width 0.3s linear, background-color 0.6s ease;
+    }
+
+    #phase-timer {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(2rem, 4.5vw, 3.5rem);
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      margin-top: 0.8rem;
+      min-height: 3rem;
+      transition: color 0.6s ease, opacity 0.3s ease;
+    }
+    #phase-timer.fading { opacity: 0; }
+
+    @keyframes soft-pulse {
+      0%, 100% { opacity: 0.06; }
+      50% { opacity: 0.2; }
+    }
+    .concluded .track-ring {
+      animation: soft-pulse 3s ease-in-out infinite;
+    }
+    .concluded #phase-label {
+      opacity: 1;
+      color: #F5C842;
+    }
+
+    #waiting-label {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1.2rem, 2.5vw, 2rem);
+      font-weight: 300;
+      color: rgba(255,255,255,0.12);
+      text-align: center;
+      margin-top: 1.5rem;
+      letter-spacing: 0.15em;
+    }
+
+    #esc-hint {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.08);
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <img src="logo.png" alt="" />
+    <span id="header-text">ESCOLA SABATINA</span>
+  </div>
+
+  <div id="clock-container">
+    <svg id="clock-svg" viewBox="0 0 400 400">
+      <defs id="svg-defs"></defs>
+
+      <circle class="track-ring" cx="200" cy="200" r="170" />
+      <circle class="inner-ring" cx="200" cy="200" r="147" />
+      <g id="glow-group" transform="rotate(-90 200 200)"></g>
+      <g id="arcs-group" transform="rotate(-90 200 200)"></g>
+      <g id="dots-group"></g>
+      <circle class="center-circle" cx="200" cy="200" r="24" />
+      <circle class="center-dot" cx="200" cy="200" r="3.5" />
+      <g id="clock-hand">
+        <line id="clock-hand-line" x1="200" y1="200" x2="200" y2="48" />
+        <circle id="clock-hand-tip" cx="200" cy="48" r="3" />
+      </g>
+    </svg>
+  </div>
+
+  <div id="phase-label"></div>
+  <div id="waiting-label">Aguardando início...</div>
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+  </div>
+  <div id="phase-timer"></div>
+  <div id="esc-hint">ESC para fechar</div>
+
+  <script>
+    const CX = 200, CY = 200, R = 170;
+
+    // Default phases (can be overridden by control)
+    const DEFAULT_PHASES = [
+      { name: 'Confraternização', minutes: 10, color: '#F5C842', enabled: true },
+      { name: 'Estudo da Lição',  minutes: 30, color: '#4A90D9', enabled: true },
+      { name: 'Pastoreiro',       minutes: 15, color: '#6BAE75', enabled: true }
+    ];
+
+    let phases = [...DEFAULT_PHASES];
+
+    let startTimestamp = null;
+    let endTimestamp = null;
+    let pausedAt = null;
+    let isRunning = false;
+    let isPaused = false;
+    let animFrameId = null;
+    let currentPhaseIndex = -1;
+
+    // Smooth transition for time adjustments
+    let targetEndTimestamp = null;  // the real target end time
+    let transitionStart = null;    // when the transition started
+    let transitionFrom = null;     // endTimestamp at start of transition
+    const TRANSITION_DURATION = 10000; // 10 seconds to smoothly reach target
+
+    const arcsGroup = document.getElementById('arcs-group');
+    const glowGroup = document.getElementById('glow-group');
+    const dotsGroup = document.getElementById('dots-group');
+    const clockHand = document.getElementById('clock-hand');
+    const phaseLabel = document.getElementById('phase-label');
+    const waitingLabel = document.getElementById('waiting-label');
+    const progressBar = document.getElementById('progress-bar');
+    const phaseTimer = document.getElementById('phase-timer');
+    const svgDefs = document.getElementById('svg-defs');
+
+    // Options from control panel
+    let showPhaseTimer = false;
+    let playSoundOnEnd = false;
+
+    // Smooth fade for time adjustments
+    let fadeTimer = null;
+    function smoothFadeUpdate() {
+      if (!showPhaseTimer) return;
+      // Fade out
+      phaseTimer.classList.add('fading');
+      if (fadeTimer) clearTimeout(fadeTimer);
+      // After fade out, let applyTransition update the value, then fade in
+      fadeTimer = setTimeout(() => {
+        phaseTimer.classList.remove('fading');
+        fadeTimer = null;
+      }, 350);
+    }
+
+    // Web Audio for gentle chime
+    let audioCtx = null;
+    function playChime() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      // Three soft notes: C5, E5, G5 — gentle sine wave
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, now + i * 0.4);
+        gain.gain.linearRampToValueAtTime(0.15, now + i * 0.4 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.4 + 1.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.4);
+        osc.stop(now + i * 0.4 + 1.3);
+      });
+    }
+
+    // Create glow filter for a given color
+    function ensureGlowFilter(color) {
+      const id = 'glow-' + color.replace('#', '');
+      if (document.getElementById(id)) return `url(#${id})`;
+      const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', id);
+      filter.setAttribute('x', '-50%');
+      filter.setAttribute('y', '-50%');
+      filter.setAttribute('width', '200%');
+      filter.setAttribute('height', '200%');
+      const blur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+      blur.setAttribute('stdDeviation', '8');
+      blur.setAttribute('result', 'blur');
+      const flood = document.createElementNS('http://www.w3.org/2000/svg', 'feFlood');
+      flood.setAttribute('flood-color', color);
+      flood.setAttribute('flood-opacity', '0.4');
+      const composite = document.createElementNS('http://www.w3.org/2000/svg', 'feComposite');
+      composite.setAttribute('in2', 'blur');
+      composite.setAttribute('operator', 'in');
+      const merge = document.createElementNS('http://www.w3.org/2000/svg', 'feMerge');
+      const mn1 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+      const mn2 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+      mn2.setAttribute('in', 'SourceGraphic');
+      merge.appendChild(mn1);
+      merge.appendChild(mn2);
+      filter.appendChild(blur);
+      filter.appendChild(flood);
+      filter.appendChild(composite);
+      filter.appendChild(merge);
+      svgDefs.appendChild(filter);
+      return `url(#${id})`;
+    }
+
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        window.electronAPI.closeDisplay();
+      }
+    });
+
+    function getActivePhases() {
+      return phases.filter(p => p.enabled);
+    }
+
+    function getTotalMinutes() {
+      return getActivePhases().reduce((sum, p) => sum + (p.minutes || p.weight || 1), 0);
+    }
+
+    function getPhaseRatio(phase) {
+      const total = getTotalMinutes();
+      const val = phase.minutes || phase.weight || 1;
+      return total > 0 ? val / total : 0;
+    }
+
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const rad = (angleDeg * Math.PI) / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      if (endAngle - startAngle >= 359.9) endAngle = startAngle + 359.9;
+      const start = polarToCartesian(cx, cy, r, endAngle);
+      const end = polarToCartesian(cx, cy, r, startAngle);
+      const largeArcFlag = (endAngle - startAngle) > 180 ? 1 : 0;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+    }
+
+    function drawArcs() {
+      arcsGroup.innerHTML = '';
+      glowGroup.innerHTML = '';
+      dotsGroup.innerHTML = '';
+      if (!startTimestamp || !endTimestamp) return;
+
+      const totalSeconds = (endTimestamp - startTimestamp) / 1000;
+      if (totalSeconds <= 0) return;
+
+      const active = getActivePhases();
+      let angleOffset = 0;
+
+      active.forEach((phase, i) => {
+        const phaseAngle = getPhaseRatio(phase) * 360;
+        const startAngle = angleOffset;
+        const endAngle = angleOffset + phaseAngle;
+
+        if (i === currentPhaseIndex) {
+          const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          glowPath.setAttribute('d', describeArc(CX, CY, R, startAngle, endAngle));
+          glowPath.setAttribute('stroke', phase.color);
+          glowPath.setAttribute('filter', ensureGlowFilter(phase.color));
+          glowPath.classList.add('phase-glow', 'active');
+          glowGroup.appendChild(glowPath);
+        }
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', describeArc(CX, CY, R, startAngle, endAngle));
+        path.setAttribute('stroke', phase.color);
+        path.classList.add('phase-arc');
+        path.dataset.index = i;
+
+        if (i === currentPhaseIndex) path.classList.add('active');
+        else if (i < currentPhaseIndex) path.classList.add('completed');
+
+        arcsGroup.appendChild(path);
+
+        if (i > 0) {
+          const dotPos = polarToCartesian(CX, CY, R, startAngle);
+          const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          dot.setAttribute('cx', dotPos.x);
+          dot.setAttribute('cy', dotPos.y);
+          dot.setAttribute('r', '3');
+          dot.classList.add('phase-dot');
+          dotsGroup.appendChild(dot);
+        }
+
+        angleOffset = endAngle;
+      });
+
+      const endDotPos = polarToCartesian(CX, CY, R, 360);
+      const endDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      endDot.setAttribute('cx', endDotPos.x);
+      endDot.setAttribute('cy', endDotPos.y);
+      endDot.setAttribute('r', '3');
+      endDot.classList.add('phase-dot');
+      dotsGroup.appendChild(endDot);
+    }
+
+    function getElapsed() {
+      if (!startTimestamp) return 0;
+      return (Date.now() - startTimestamp) / 1000;
+    }
+
+    function formatTime(s) {
+      if (s <= 0) return '00:00';
+      return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+    }
+
+    // Smooth easing function (ease-in-out cubic)
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    // Apply smooth transition each frame
+    function applyTransition() {
+      if (targetEndTimestamp === null || transitionStart === null) return;
+      const now = Date.now();
+      const elapsed = now - transitionStart;
+      const t = Math.min(elapsed / TRANSITION_DURATION, 1);
+      const eased = easeInOutCubic(t);
+      endTimestamp = transitionFrom + (targetEndTimestamp - transitionFrom) * eased;
+      if (t >= 1) {
+        endTimestamp = targetEndTimestamp;
+        targetEndTimestamp = null;
+        transitionStart = null;
+        transitionFrom = null;
+      }
+    }
+
+    function getTotalSeconds() {
+      if (!endTimestamp || !startTimestamp) return 0;
+      return (endTimestamp - startTimestamp) / 1000;
+    }
+
+    function getPhaseInfo(elapsed, totalSeconds) {
+      const active = getActivePhases();
+      let accumulated = 0;
+      for (let i = 0; i < active.length; i++) {
+        const phaseDuration = getPhaseRatio(active[i]) * totalSeconds;
+        if (elapsed < accumulated + phaseDuration) {
+          return { index: i, progress: (elapsed - accumulated) / phaseDuration, accumulated };
+        }
+        accumulated += phaseDuration;
+      }
+      return { index: active.length - 1, progress: 1, accumulated: accumulated - getPhaseRatio(active[active.length - 1]) * totalSeconds };
+    }
+
+    function updateDisplay() {
+      applyTransition(); // smooth time adjustments
+      const totalSeconds = getTotalSeconds();
+      const elapsed = getElapsed();
+      if (totalSeconds <= 0 || !isRunning) return;
+
+      const progress = Math.min(elapsed / totalSeconds, 1);
+      const angle = progress * 360;
+      clockHand.setAttribute('transform', `rotate(${angle} ${CX} ${CY})`);
+
+      const phaseInfo = getPhaseInfo(elapsed, totalSeconds);
+      const active = getActivePhases();
+      const newPhaseIndex = elapsed >= totalSeconds ? -1 : phaseInfo.index;
+
+      if (newPhaseIndex !== currentPhaseIndex) {
+        currentPhaseIndex = newPhaseIndex;
+        drawArcs();
+        updatePhaseLabel();
+      }
+
+      if (currentPhaseIndex >= 0 && currentPhaseIndex < active.length) {
+        progressBar.style.width = (phaseInfo.progress * 100) + '%';
+        progressBar.style.backgroundColor = active[currentPhaseIndex].color;
+        // Update phase timer — use target end time for accurate display
+        if (showPhaseTimer) {
+          const effectiveTotal = targetEndTimestamp !== null
+            ? (targetEndTimestamp - startTimestamp) / 1000
+            : totalSeconds;
+          const phaseDuration = getPhaseRatio(active[currentPhaseIndex]) * effectiveTotal;
+          const phaseRemaining = Math.max(phaseDuration - (elapsed - phaseInfo.accumulated), 0);
+          phaseTimer.textContent = formatTime(phaseRemaining);
+          phaseTimer.style.color = active[currentPhaseIndex].color + '99';
+        }
+      }
+
+      if (elapsed >= totalSeconds) concludeSession();
+    }
+
+    function updatePhaseLabel() {
+      const active = getActivePhases();
+      if (currentPhaseIndex >= 0 && currentPhaseIndex < active.length) {
+        phaseLabel.textContent = active[currentPhaseIndex].name;
+        phaseLabel.style.color = active[currentPhaseIndex].color;
+        phaseLabel.classList.add('visible');
+        waitingLabel.style.display = 'none';
+      } else {
+        phaseLabel.classList.remove('visible');
+      }
+    }
+
+    function concludeSession() {
+      isRunning = false;
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      document.body.classList.add('concluded');
+      phaseLabel.textContent = 'Concluído';
+      phaseLabel.style.color = '#F5C842';
+      phaseLabel.classList.add('visible');
+      waitingLabel.style.display = 'none';
+      progressBar.style.width = '100%';
+      progressBar.style.backgroundColor = '#F5C842';
+      clockHand.setAttribute('transform', `rotate(360 ${CX} ${CY})`);
+      if (showPhaseTimer) {
+        phaseTimer.textContent = '00:00';
+        phaseTimer.style.color = 'rgba(245,200,66,0.7)';
+      }
+      if (playSoundOnEnd) playChime();
+    }
+
+    function tick() {
+      if (!isRunning || isPaused) return;
+      updateDisplay();
+      animFrameId = requestAnimationFrame(tick);
+    }
+
+    function startAnimation() {
+      isRunning = true;
+      isPaused = false;
+      waitingLabel.style.display = 'none';
+      document.body.classList.remove('concluded');
+      drawArcs();
+      tick();
+    }
+
+    function pauseAnimation() {
+      isPaused = true;
+      pausedAt = Date.now();
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    }
+
+    function resumeAnimation() {
+      if (pausedAt) {
+        startTimestamp += (Date.now() - pausedAt);
+        pausedAt = null;
+      }
+      isPaused = false;
+      tick();
+    }
+
+    function resetDisplay() {
+      isRunning = false;
+      isPaused = false;
+      startTimestamp = null;
+      endTimestamp = null;
+      pausedAt = null;
+      currentPhaseIndex = -1;
+      targetEndTimestamp = null;
+      transitionStart = null;
+      transitionFrom = null;
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      arcsGroup.innerHTML = '';
+      glowGroup.innerHTML = '';
+      dotsGroup.innerHTML = '';
+      clockHand.setAttribute('transform', `rotate(0 ${CX} ${CY})`);
+      phaseLabel.classList.remove('visible');
+      phaseLabel.textContent = '';
+      waitingLabel.style.display = 'block';
+      progressBar.style.width = '0%';
+      phaseTimer.textContent = '';
+      document.body.classList.remove('concluded');
+    }
+
+    // IPC
+    window.electronAPI.onTimerCommand((command) => {
+      const { type } = command;
+
+      if (type === 'start') {
+        startTimestamp = command.startTimestamp;
+        endTimestamp = command.endTimestamp;
+        pausedAt = null;
+        currentPhaseIndex = -1;
+        if (command.phases) phases = command.phases;
+        startAnimation();
+      } else if (type === 'adjustEnd') {
+        // Start smooth transition instead of instant change
+        targetEndTimestamp = command.newEndTimestamp;
+        transitionStart = Date.now();
+        transitionFrom = endTimestamp;
+        smoothFadeUpdate();
+      } else if (type === 'updatePhases') {
+        phases = command.phases;
+        if (isRunning) { currentPhaseIndex = -1; drawArcs(); updateDisplay(); smoothFadeUpdate(); }
+      } else if (type === 'pause') {
+        pauseAnimation();
+      } else if (type === 'resume') {
+        resumeAnimation();
+      } else if (type === 'reset') {
+        resetDisplay();
+      } else if (type === 'setOptions') {
+        if (command.showPhaseTimer !== undefined) showPhaseTimer = command.showPhaseTimer;
+        if (command.playSoundOnEnd !== undefined) playSoundOnEnd = command.playSoundOnEnd;
+        if (!showPhaseTimer) phaseTimer.textContent = '';
+      }
+    });
+  </script>
+</body>
+</html>
