@@ -24,13 +24,20 @@ Timer visual para Escola Sabatina com relógio analógico e arcos coloridos repr
 
 ## Capturas de Tela
 
-> _Adicione capturas de tela aqui_
+<img width="585" height="946" alt="image" src="https://github.com/user-attachments/assets/19a3faf1-a176-4e33-99ae-ad2d6263c82c" />
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3feaf648-2794-4216-9a03-fc5fc33faf1c" />
+
+
 
 ## Instalação e Uso
 
 ### Executável (Windows)
 
 Baixe o `EscolaSabatinaTimer.exe` da [página de releases](../../releases) e execute diretamente — não requer instalação.
+
+![Uploading image.png…]()
+
 
 ### Desenvolvimento
 
